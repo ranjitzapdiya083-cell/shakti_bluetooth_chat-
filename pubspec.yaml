@@ -1,3 +1,4 @@
+```yaml
 name: shakti_bluetooth_chat
 description: "Shakti Bluetooth Chat — premium offline Bluetooth messaging."
 publish_to: 'none'
@@ -9,6 +10,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+
   cupertino_icons: ^1.0.8
 
   # State management
@@ -37,7 +39,7 @@ dependencies:
   mobile_scanner: ^5.2.3
 
   # Material You dynamic color
-  dynamic_color:^1.8.1
+  dynamic_color: ^1.8.1
 
   # App info (version number on Settings screen)
   package_info_plus: ^8.0.2
@@ -56,9 +58,11 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
   flutter_lints: ^4.0.0
   hive_generator: ^2.0.1
   build_runner: ^2.4.11
 
 flutter:
   uses-material-design: true
+```
