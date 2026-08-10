@@ -37,7 +37,7 @@ dependencies:
   mobile_scanner: ^5.2.3
 
   # Material You dynamic color
- dynamic_color:^1.8.1
+  dynamic_color:^1.8.1
 
   # App info (version number on Settings screen)
   package_info_plus: ^8.0.2
