@@ -127,9 +127,17 @@ class _ScanQrTabState extends ConsumerState<_ScanQrTab> {
 
     final bt = ref.read(bluetoothServiceProvider);
     await bt.pairDevice(address);
-    await bt.connect(address);
+    final connected = await bt.connect(address);
 
-    if (mounted) context.replace('/chat/$address');
+    if (!mounted) return;
+    if (connected) {
+      context.replace('/chat/$address');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not connect to that device. Make sure it is nearby and Bluetooth is on, then try again.')),
+      );
+      setState(() => _handled = false);
+    }
   }
 
   @override
