@@ -51,9 +51,22 @@ subprojects {
 // old compileSdk. Forcing every subproject to compile against the same
 // (newer) SDK as the app fixes this without editing the plugin itself.
 subprojects {
-    afterEvaluate {
-        extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.let { androidExt ->
-            androidExt.compileSdkVersion(35)
+    plugins.withId("com.android.library") {
+        val applyCompileSdk: () -> Unit = {
+            extensions.findByType(com.android.build.gradle.LibraryExtension::class.java)?.let { androidExt ->
+                androidExt.compileSdkVersion(36)
+            }
+        }
+        // Flutter's Gradle plugin can evaluate plugin subprojects before this
+        // root build.gradle.kts's subprojects {} block runs. Calling
+        // afterEvaluate on an already-evaluated project throws
+        // "Cannot run Project.afterEvaluate(Action) when the project is
+        // already evaluated", so check state first and configure directly
+        // in that case instead of registering a callback.
+        if (project.state.executed) {
+            applyCompileSdk()
+        } else {
+            afterEvaluate { applyCompileSdk() }
         }
     }
 }
