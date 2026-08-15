@@ -5,6 +5,14 @@ class PermissionService {
 
   /// Android 12+ needs BLUETOOTH_SCAN / BLUETOOTH_CONNECT.
   /// Android <12 needs ACCESS_FINE_LOCATION for discovery to return results.
+  ///
+  /// NOTE: location is requested for older devices, but is NOT required for
+  /// success. On Android 12+ the manifest declares BLUETOOTH_SCAN with
+  /// `neverForLocation`, and ACCESS_FINE_LOCATION/COARSE_LOCATION are capped
+  /// at maxSdkVersion=30 — so on Android 12+ devices the OS never even shows
+  /// a location prompt and Permission.location.status stays "denied"
+  /// forever. Treating it as required made scanning silently refuse to
+  /// start on Android 12+ even when every Bluetooth permission was granted.
   static Future<bool> requestBluetoothPermissions() async {
     final statuses = await [
       Permission.bluetoothScan,
@@ -13,7 +21,13 @@ class PermissionService {
       Permission.location,
     ].request();
 
-    return statuses.values.every((s) => s.isGranted || s.isLimited);
+    final bluetoothGranted = [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.bluetoothAdvertise,
+    ].every((p) => statuses[p]?.isGranted == true || statuses[p]?.isLimited == true);
+
+    return bluetoothGranted;
   }
 
   static Future<bool> hasBluetoothPermissions() async {
