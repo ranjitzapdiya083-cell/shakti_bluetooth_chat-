@@ -138,7 +138,25 @@ class _RecentChatsTab extends ConsumerWidget {
           subtitle: chat.lastMessagePreview ?? 'Tap to open chat',
           isConnected: connectedAddress == chat.address,
           unreadCount: chat.unreadCount,
-          onTap: () => context.push('/chat/${chat.address}'),
+          onTap: () async {
+            final bt = ref.read(bluetoothServiceProvider);
+            if (bt.connectedAddress != chat.address || !bt.isConnected) {
+              final connected = await bt.connect(chat.address);
+              if (!context.mounted) return;
+              if (!connected) {
+                final reason = bt.lastConnectError;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(
+                    'Could not connect to ${chat.displayName}.'
+                    '${reason != null ? ' ($reason)' : ' Make sure it is nearby and Bluetooth is on.'}',
+                  )),
+                );
+                context.push('/chat/${chat.address}');
+                return;
+              }
+            }
+            if (context.mounted) context.push('/chat/${chat.address}');
+          },
         );
       },
     );
