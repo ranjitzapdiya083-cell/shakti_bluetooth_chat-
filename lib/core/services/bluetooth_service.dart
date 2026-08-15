@@ -113,6 +113,19 @@ class AppBluetoothService {
     try {
       _connectionStateController.add(isReconnectAttempt ? BtConnectionState.reconnecting : BtConnectionState.connecting);
       lastConnectError = null;
+
+      // Discovery left running (e.g. user just scanned the Nearby tab) makes
+      // BluetoothConnection.toAddress() fail on many devices — most commonly
+      // reported on Android 13 — with "read failed, socket might closed or
+      // timeout, read ret: -1". Always stop it first and give the radio a
+      // brief moment to settle before opening the RFCOMM socket.
+      try {
+        await _serial.cancelDiscovery();
+      } catch (_) {
+        // Ignore — discovery may not have been running.
+      }
+      await Future.delayed(const Duration(milliseconds: 300));
+
       final conn = await BluetoothConnection.toAddress(address);
       _connection = conn;
       _connectedAddress = address;
