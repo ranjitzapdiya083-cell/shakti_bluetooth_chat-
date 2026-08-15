@@ -4,10 +4,8 @@ allprojects {
         mavenCentral()
     }
 }
-
 val newBuildDir: Directory = rootProject.layout.buildDirectory.dir("../../build").get()
 rootProject.layout.buildDirectory.value(newBuildDir)
-
 subprojects {
     val newSubprojectBuildDir: Directory = newBuildDir.dir(project.name)
     project.layout.buildDirectory.value(newSubprojectBuildDir)
@@ -15,7 +13,6 @@ subprojects {
 subprojects {
     project.evaluationDependsOn(":app")
 }
-
 // --- Compatibility patch for legacy plugins (e.g. flutter_bluetooth_serial) ---
 // Old/unmaintained plugins still declare `package="..."` inside their own
 // AndroidManifest.xml instead of setting `namespace` in build.gradle. Modern
@@ -45,7 +42,21 @@ subprojects {
         }
     }
 }
-
+// --- Compile SDK alignment patch ---
+// Legacy plugins (e.g. flutter_bluetooth_serial) still hardcode an old
+// compileSdkVersion (28/30). When their AAR resources get merged with
+// modern AndroidX resources pulled in by newer Flutter/AGP versions, AAPT
+// fails with errors like "resource android:attr/lStar not found" because
+// attributes introduced in newer API levels aren't known at the plugin's
+// old compileSdk. Forcing every subproject to compile against the same
+// (newer) SDK as the app fixes this without editing the plugin itself.
+subprojects {
+    afterEvaluate {
+        extensions.findByType(com.android.build.gradle.BaseExtension::class.java)?.let { androidExt ->
+            androidExt.compileSdkVersion(35)
+        }
+    }
+}
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
