@@ -42,36 +42,14 @@ subprojects {
         }
     }
 }
-// --- Compile SDK alignment patch ---
-// Legacy plugins (e.g. flutter_bluetooth_serial) still hardcode an old
-// compileSdkVersion (28/30). When their AAR resources get merged with
-// modern AndroidX resources pulled in by newer Flutter/AGP versions, AAPT
-// fails with errors like "resource android:attr/lStar not found" because
-// attributes introduced in newer API levels aren't known at the plugin's
-// old compileSdk. Forcing every subproject to compile against the same
-// (newer) SDK as the app fixes this without editing the plugin itself.
-subprojects {
-    if (project.name == "flutter_bluetooth_serial") {
-        plugins.withId("com.android.library") {
-            val applyCompileSdk: () -> Unit = {
-                extensions.findByType(com.android.build.gradle.LibraryExtension::class.java)?.let { androidExt ->
-                    androidExt.compileSdkVersion(36)
-                }
-            }
-            // Flutter's Gradle plugin can evaluate plugin subprojects before this
-            // root build.gradle.kts's subprojects {} block runs. Calling
-            // afterEvaluate on an already-evaluated project throws
-            // "Cannot run Project.afterEvaluate(Action) when the project is
-            // already evaluated", so check state first and configure directly
-            // in that case instead of registering a callback.
-            if (project.state.executed) {
-                applyCompileSdk()
-            } else {
-                afterEvaluate { applyCompileSdk() }
-            }
-        }
-    }
-}
+// NOTE: compileSdk for flutter_bluetooth_serial is patched directly in its
+// build.gradle file by the CI workflow (see "Fix flutter_bluetooth_serial
+// namespace and compileSdk" step in .github/workflows/build-apk.yml) rather
+// than here. AGP reads compileSdk eagerly as soon as the plugin's own
+// build.gradle sets it, so overriding it from the root project's
+// subprojects {} block (even via afterEvaluate) is always "too late" and
+// throws "It is too late to set compileSdk". A plain text patch before
+// Gradle evaluates the project is the only reliable fix.
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
