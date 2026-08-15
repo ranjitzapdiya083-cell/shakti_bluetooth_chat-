@@ -191,8 +191,19 @@ class _PairedDevicesTab extends ConsumerWidget {
                 entry.lastConnectedAt = DateTime.now();
                 await storage.upsertDevice(entry);
                 final bt = ref.read(bluetoothServiceProvider);
-                await bt.connect(d.address);
-                if (context.mounted) context.push('/chat/${d.address}');
+                final connected = await bt.connect(d.address);
+                if (!context.mounted) return;
+                if (connected) {
+                  context.push('/chat/${d.address}');
+                } else {
+                  final reason = bt.lastConnectError;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(
+                      'Could not connect to ${d.name ?? d.address}.'
+                      '${reason != null ? ' ($reason)' : ' Make sure it is nearby, powered on, and Bluetooth is on.'}',
+                    )),
+                  );
+                }
               },
             );
           },
@@ -289,8 +300,15 @@ class _NearbyDevicesTabState extends ConsumerState<_NearbyDevicesTab> {
                           entry.lastConnectedAt = DateTime.now();
                           await storage.upsertDevice(entry);
                           final bt = ref.read(bluetoothServiceProvider);
-                          await bt.connect(device.address);
-                          if (context.mounted) context.push('/chat/${device.address}');
+                          final connected = await bt.connect(device.address);
+                          if (!context.mounted) return;
+                          if (connected) {
+                            context.push('/chat/${device.address}');
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Could not connect to ${device.name ?? device.address}. Pair the device first, then try again.')),
+                            );
+                          }
                         },
                       );
                     },
