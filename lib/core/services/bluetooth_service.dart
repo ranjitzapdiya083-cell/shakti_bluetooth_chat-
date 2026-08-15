@@ -38,6 +38,10 @@ class AppBluetoothService {
   String? get connectedAddress => _connectedAddress;
   bool get isConnected => _connection?.isConnected ?? false;
 
+  /// Message from the most recent failed connect() call, for surfacing to
+  /// the user / logs instead of failing silently.
+  String? lastConnectError;
+
   final StringBuffer _rxBuffer = StringBuffer();
   FileReceiveSession? _activeFileSession;
 
@@ -108,6 +112,7 @@ class AppBluetoothService {
   Future<bool> connect(String address, {bool isReconnectAttempt = false}) async {
     try {
       _connectionStateController.add(isReconnectAttempt ? BtConnectionState.reconnecting : BtConnectionState.connecting);
+      lastConnectError = null;
       final conn = await BluetoothConnection.toAddress(address);
       _connection = conn;
       _connectedAddress = address;
@@ -122,6 +127,7 @@ class AppBluetoothService {
       return true;
     } catch (e) {
       _logger.e('Connect failed: $e');
+      lastConnectError = e.toString();
       _connectionStateController.add(BtConnectionState.disconnected);
       return false;
     }
