@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/core_providers.dart';
 import '../../../core/services/bluetooth_service.dart';
+import '../../../core/services/permission_service.dart';
 
 /// Whether the adapter itself is on/off.
 final adapterStateProvider = StreamProvider<BluetoothState>((ref) {
@@ -15,6 +16,10 @@ final adapterStateProvider = StreamProvider<BluetoothState>((ref) {
 
 /// Currently paired (bonded) devices.
 final pairedDevicesProvider = FutureProvider.autoDispose<List<BluetoothDevice>>((ref) async {
+  final granted = await PermissionService.requestBluetoothPermissions();
+  if (!granted) {
+    throw Exception('Bluetooth and Location permissions are required to see paired devices. Tap "Check permissions" below, allow them, then pull to refresh.');
+  }
   final bt = ref.watch(bluetoothServiceProvider);
   return bt.getPairedDevices();
 });
