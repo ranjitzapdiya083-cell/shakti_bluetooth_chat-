@@ -15,11 +15,13 @@
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
 
-    <!-- Needed pre-Android 12 for discovery to return nearby device results -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"
-        android:maxSdkVersion="30" />
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"
-        android:maxSdkVersion="30" />
+    <!-- The flutter_bluetooth_serial plugin's native discovery code checks
+         for ACCESS_FINE_LOCATION at runtime on ALL Android versions (it
+         predates the neverForLocation exception for BLUETOOTH_SCAN), so this
+         must remain grantable on Android 12+ too, or discovery throws
+         PlatformException(no_permissions, ...). -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
     <!-- File sharing -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
