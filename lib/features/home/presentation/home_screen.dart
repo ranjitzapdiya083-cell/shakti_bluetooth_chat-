@@ -185,7 +185,10 @@ class _PairedDevicesTab extends ConsumerWidget {
             title: 'No paired devices',
             message: 'Go to the Nearby tab to discover and pair a device.',
             action: FilledButton.icon(
-              onPressed: () => PermissionService.requestBluetoothPermissions(),
+              onPressed: () async {
+                await PermissionService.requestBluetoothPermissions();
+                ref.invalidate(pairedDevicesProvider);
+              },
               icon: const Icon(Icons.perm_device_information_rounded, size: 18),
               label: const Text('Check permissions'),
             ),
