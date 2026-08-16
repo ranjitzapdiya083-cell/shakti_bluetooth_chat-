@@ -109,41 +109,50 @@ class AppBluetoothService {
 
   /// Connects (RFCOMM) to [address]. On unexpected drop, auto-reconnects
   /// up to [AppConstants.maxReconnectAttempts] with a short backoff.
+  ///
+  /// The very first connect attempt is also retried internally a couple of
+  /// times: "read failed, socket might closed or timeout, read ret: -1" is a
+  /// well-known transient failure in Android's Bluetooth stack (reported
+  /// across many apps/frameworks, not specific to this one) where the first
+  /// attempt fails but a retry a moment later succeeds.
   Future<bool> connect(String address, {bool isReconnectAttempt = false}) async {
-    try {
-      _connectionStateController.add(isReconnectAttempt ? BtConnectionState.reconnecting : BtConnectionState.connecting);
-      lastConnectError = null;
-
-      // Discovery left running (e.g. user just scanned the Nearby tab) makes
-      // BluetoothConnection.toAddress() fail on many devices — most commonly
-      // reported on Android 13 — with "read failed, socket might closed or
-      // timeout, read ret: -1". Always stop it first and give the radio a
-      // brief moment to settle before opening the RFCOMM socket.
+    const maxAttempts = 3;
+    for (var attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
-        await _serial.cancelDiscovery();
-      } catch (_) {
-        // Ignore — discovery may not have been running.
+        _connectionStateController.add(isReconnectAttempt ? BtConnectionState.reconnecting : BtConnectionState.connecting);
+        lastConnectError = null;
+
+        // Discovery left running makes connect fail on many devices — always
+        // stop it first and give the radio a brief moment to settle.
+        try {
+          await _serial.cancelDiscovery();
+        } catch (_) {
+          // Ignore — discovery may not have been running.
+        }
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        final conn = await BluetoothConnection.toAddress(address);
+        _connection = conn;
+        _connectedAddress = address;
+        _reconnectAttempts = 0;
+        _connectionStateController.add(BtConnectionState.connected);
+
+        _dataSub = conn.input?.listen(
+          _onDataReceived,
+          onDone: () => _handleDisconnect(address),
+          onError: (_) => _handleDisconnect(address),
+        );
+        return true;
+      } catch (e) {
+        _logger.e('Connect attempt $attempt/$maxAttempts failed: $e');
+        lastConnectError = e.toString();
+        if (attempt < maxAttempts) {
+          await Future.delayed(Duration(milliseconds: 800 * attempt));
+        }
       }
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      final conn = await BluetoothConnection.toAddress(address);
-      _connection = conn;
-      _connectedAddress = address;
-      _reconnectAttempts = 0;
-      _connectionStateController.add(BtConnectionState.connected);
-
-      _dataSub = conn.input?.listen(
-        _onDataReceived,
-        onDone: () => _handleDisconnect(address),
-        onError: (_) => _handleDisconnect(address),
-      );
-      return true;
-    } catch (e) {
-      _logger.e('Connect failed: $e');
-      lastConnectError = e.toString();
-      _connectionStateController.add(BtConnectionState.disconnected);
-      return false;
     }
+    _connectionStateController.add(BtConnectionState.disconnected);
+    return false;
   }
 
   void _handleDisconnect(String address) {
